@@ -17,8 +17,20 @@
   },
   "topbarLinks": [
     {
-      "name": "Support",
-      "url": "mailto:support@aiptx.io"
+      "name": "Docs",
+      "url": "https://docs.aiptx.io"
+    },
+    {
+      "name": "Pricing",
+      "url": "https://aiptx.io/pricing"
+    },
+    {
+      "name": "Blog",
+      "url": "https://aiptx.io/blog"
+    },
+    {
+      "name": "Contact",
+      "url": "https://aiptx.io/contact"
     }
   ],
   "topbarCtaButton": {
