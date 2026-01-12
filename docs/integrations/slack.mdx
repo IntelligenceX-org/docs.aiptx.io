@@ -1,0 +1,280 @@
+---
+title: Slack
+description: 'Get real-time security alerts and scan updates in Slack'
+---
+
+# Slack Integration
+
+Receive instant notifications about security findings, scan completions, and critical alerts directly in your Slack workspace.
+
+## Setup
+
+### 1. Connect Slack
+
+1. Log in to the [AIPTx Dashboard](https://app.aiptx.io)
+2. Navigate to **Settings** → **Integrations** → **Slack**
+3. Click **Connect to Slack**
+4. Select your workspace and authorize AIPTx
+5. Choose the default channel for notifications
+
+### 2. Configure Notifications
+
+Select which events trigger Slack notifications:
+
+```yaml
+# Available notification events
+notifications:
+  scan_started: true
+  scan_completed: true
+  critical_finding: true
+  high_finding: true
+  medium_finding: false
+  weekly_summary: true
+```
+
+## Notification Types
+
+### Scan Started
+
+```
+🔍 Security Scan Started
+Target: https://app.example.com
+Mode: Standard
+Started by: john@example.com
+View: https://app.aiptx.io/scans/abc123
+```
+
+### Scan Completed
+
+<Frame>
+![Scan Completed Notification](/images/slack-scan-complete.png)
+</Frame>
+
+```
+✅ Security Scan Completed
+
+Target: https://app.example.com
+Duration: 2h 15m
+Status: Completed
+
+Findings Summary:
+🔴 Critical: 2
+🟠 High: 5
+🟡 Medium: 12
+🔵 Low: 23
+
+[View Full Report] [Download PDF]
+```
+
+### Critical Finding Alert
+
+```
+🚨 Critical Vulnerability Detected
+
+SQL Injection in User Search
+Endpoint: POST /api/users/search
+CVSS Score: 9.8
+
+An attacker can extract sensitive data from the database
+including user credentials.
+
+[View Details] [Mark as Reviewed]
+```
+
+### Weekly Summary
+
+```
+📊 Weekly Security Summary
+
+Period: Jan 8 - Jan 14, 2024
+
+Scans Run: 12
+New Findings: 8
+Fixed Findings: 15
+
+Top Issues:
+1. SQL Injection - 2 instances
+2. XSS - 3 instances
+3. IDOR - 1 instance
+
+Trend: ↓ 15% fewer critical findings than last week
+
+[View Dashboard]
+```
+
+## Channel Configuration
+
+### Multiple Channels
+
+Route different notification types to specific channels:
+
+```yaml
+channels:
+  default: "#security-alerts"
+  critical: "#security-critical"
+  scans: "#security-scans"
+  weekly: "#security-weekly"
+```
+
+### Per-Project Channels
+
+Configure channels for specific projects:
+
+```yaml
+projects:
+  web-app:
+    channel: "#webapp-security"
+    notify_on: [critical, high]
+  api:
+    channel: "#api-security"
+    notify_on: [critical, high, medium]
+```
+
+## Slash Commands
+
+AIPTx adds slash commands to your Slack workspace:
+
+### `/aiptx scan`
+
+Start a quick scan from Slack:
+
+```
+/aiptx scan https://example.com
+```
+
+Options:
+```
+/aiptx scan https://example.com --mode quick
+/aiptx scan https://example.com --mode standard
+```
+
+### `/aiptx status`
+
+Check status of running scans:
+
+```
+/aiptx status
+```
+
+Response:
+```
+Active Scans:
+
+1. https://app.example.com
+   Mode: Standard | Progress: 65%
+   Started: 45 minutes ago
+
+2. https://api.example.com
+   Mode: Quick | Progress: 90%
+   Started: 12 minutes ago
+```
+
+### `/aiptx findings`
+
+Get recent findings summary:
+
+```
+/aiptx findings --days 7
+```
+
+### `/aiptx report`
+
+Request a report for a completed scan:
+
+```
+/aiptx report scan_abc123 --format pdf
+```
+
+## Interactive Messages
+
+### Finding Actions
+
+When a finding is posted, team members can take action directly from Slack:
+
+- **👀 View Details** - Open finding in AIPTx dashboard
+- **✅ Mark Fixed** - Update finding status
+- **🔇 Mute** - Suppress future alerts for this finding
+- **📋 Create Ticket** - Create Jira/Linear issue
+
+### Scan Actions
+
+- **📊 View Report** - Open scan report
+- **🔄 Rescan** - Start a new scan with same config
+- **⬇️ Download** - Get PDF report
+
+## Workflow Automation
+
+### Slack Workflow Builder
+
+Create automated workflows triggered by AIPTx events:
+
+**Example: Critical Finding Escalation**
+
+1. AIPTx posts critical finding
+2. Workflow adds reaction and threads response
+3. Creates incident channel
+4. Pages on-call engineer via PagerDuty
+
+### Webhooks
+
+For custom integrations, use webhook endpoints:
+
+```bash
+POST https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+```
+
+AIPTx can send raw JSON payloads:
+
+```json
+{
+  "event": "finding.critical",
+  "scan_id": "scan_abc123",
+  "finding": {
+    "id": "finding_xyz789",
+    "title": "SQL Injection in User Search",
+    "severity": "critical",
+    "cvss_score": 9.8,
+    "endpoint": "/api/users/search"
+  },
+  "timestamp": "2024-01-15T12:30:00Z"
+}
+```
+
+## Configuration via API
+
+Configure Slack integration programmatically:
+
+```bash
+# Set notification preferences
+curl -X PUT "https://api.aiptx.io/v1/integrations/slack" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "default_channel": "#security-alerts",
+    "notifications": {
+      "scan_completed": true,
+      "critical_finding": true,
+      "high_finding": true,
+      "weekly_summary": true
+    }
+  }'
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Not receiving notifications">
+    1. Verify Slack is connected in Settings → Integrations
+    2. Check the bot has access to the target channel
+    3. Ensure notification types are enabled
+  </Accordion>
+
+  <Accordion title="Slash commands not working">
+    1. Reinstall the Slack app
+    2. Verify your user has permission to use slash commands
+    3. Check the command syntax
+  </Accordion>
+
+  <Accordion title="Too many notifications">
+    Adjust notification settings to only receive critical and high severity alerts, or route to a dedicated channel.
+  </Accordion>
+</AccordionGroup>

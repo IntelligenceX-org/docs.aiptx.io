@@ -1,0 +1,142 @@
+---
+title: Authentication Testing
+description: 'Advanced authentication and session testing configurations'
+---
+
+# Authentication Testing
+
+Configure AIPTx to test authenticated areas of your application.
+
+## Authentication Methods
+
+### Bearer Token
+
+```yaml
+authentication:
+  type: bearer
+  token: "eyJhbGciOiJIUzI1NiIs..."
+```
+
+### Basic Auth
+
+```yaml
+authentication:
+  type: basic
+  username: "testuser"
+  password: "${TEST_PASSWORD}"
+```
+
+### Cookie-Based
+
+```yaml
+authentication:
+  type: cookie
+  cookies:
+    session_id: "abc123"
+    csrf_token: "xyz789"
+```
+
+### Custom Headers
+
+```yaml
+authentication:
+  type: custom
+  headers:
+    Authorization: "Bearer ${TOKEN}"
+    X-API-Key: "${API_KEY}"
+```
+
+### Login Flow
+
+```yaml
+authentication:
+  type: login
+  login_url: "https://app.example.com/api/auth/login"
+  method: POST
+  body:
+    email: "${TEST_EMAIL}"
+    password: "${TEST_PASSWORD}"
+  success_indicator: "access_token"
+  token_extraction:
+    type: json
+    path: "data.access_token"
+  token_usage:
+    header: "Authorization"
+    prefix: "Bearer "
+```
+
+## Multi-User Testing
+
+Test with different user roles:
+
+```yaml
+authentication:
+  users:
+    - name: regular_user
+      type: bearer
+      token: "${USER_TOKEN}"
+      roles: [user]
+
+    - name: admin_user
+      type: bearer
+      token: "${ADMIN_TOKEN}"
+      roles: [admin]
+
+    - name: anonymous
+      type: none
+
+test_scenarios:
+  - user: regular_user
+    test: "Can access own resources"
+  - user: admin_user
+    test: "Can access admin endpoints"
+  - user: anonymous
+    test: "Cannot access protected endpoints"
+```
+
+## Session Testing
+
+### Session Fixation
+
+```yaml
+session_tests:
+  fixation:
+    enabled: true
+    verify_regeneration: true
+```
+
+### Session Timeout
+
+```yaml
+session_tests:
+  timeout:
+    enabled: true
+    expected_timeout: 3600  # seconds
+```
+
+## OAuth/OIDC Testing
+
+```yaml
+authentication:
+  type: oauth2
+  flow: authorization_code
+  client_id: "${OAUTH_CLIENT_ID}"
+  client_secret: "${OAUTH_CLIENT_SECRET}"
+  token_url: "https://auth.example.com/oauth/token"
+  authorize_url: "https://auth.example.com/oauth/authorize"
+  scope: "read write"
+```
+
+## JWT Configuration
+
+```yaml
+jwt_testing:
+  enabled: true
+  tests:
+    - algorithm_none
+    - weak_secret
+    - expired_token
+    - missing_claims
+  custom_claims:
+    test_privilege_escalation: true
+```

@@ -1,0 +1,322 @@
+---
+title: Findings
+description: 'API endpoints for managing vulnerability findings'
+---
+
+# Findings API
+
+The Findings API provides access to vulnerability findings discovered during scans.
+
+## List Findings
+
+Retrieve findings from a scan.
+
+```bash
+GET /v1/findings
+```
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `scan_id` | string | Required. Filter by scan ID |
+| `severity` | string | Filter by severity: `critical`, `high`, `medium`, `low`, `info` |
+| `status` | string | Filter by status: `open`, `fixed`, `accepted`, `false_positive` |
+| `category` | string | Filter by category (e.g., `injection`, `authentication`) |
+| `page` | integer | Page number (default: 1) |
+| `limit` | integer | Results per page (default: 20, max: 100) |
+
+### Request
+
+```bash
+curl -X GET "https://api.aiptx.io/v1/findings?scan_id=scan_abc123&severity=critical" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "finding_xyz789",
+      "scan_id": "scan_abc123",
+      "title": "SQL Injection in User Search",
+      "severity": "critical",
+      "cvss_score": 9.8,
+      "status": "open",
+      "category": "injection",
+      "endpoint": {
+        "method": "POST",
+        "path": "/api/users/search",
+        "parameter": "query"
+      },
+      "first_seen": "2024-01-15T12:30:00Z",
+      "created_at": "2024-01-15T12:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 42,
+    "total_pages": 3
+  }
+}
+```
+
+## Get Finding
+
+Retrieve detailed information about a specific finding.
+
+```bash
+GET /v1/findings/{finding_id}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "finding_xyz789",
+    "scan_id": "scan_abc123",
+    "title": "SQL Injection in User Search",
+    "severity": "critical",
+    "cvss_score": 9.8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "status": "open",
+    "category": "injection",
+    "subcategory": "sql_injection",
+    "cwe_id": "CWE-89",
+    "description": "A SQL injection vulnerability was discovered in the user search endpoint. An attacker can inject arbitrary SQL queries through the 'query' parameter, potentially accessing or modifying all data in the database.",
+    "impact": "An attacker could extract sensitive user data including credentials, modify or delete database records, or potentially gain shell access to the server.",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/users/search",
+      "parameter": "query",
+      "full_url": "https://app.example.com/api/users/search"
+    },
+    "proof_of_concept": {
+      "request": {
+        "method": "POST",
+        "url": "https://app.example.com/api/users/search",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer [REDACTED]"
+        },
+        "body": "{\"query\": \"' UNION SELECT username, password FROM users--\"}"
+      },
+      "response": {
+        "status": 200,
+        "body": "[{\"username\": \"admin\", \"password\": \"$2b$10$...\"}, ...]",
+        "evidence": "Database credentials were returned in the response"
+      },
+      "curl_command": "curl -X POST 'https://app.example.com/api/users/search' -H 'Content-Type: application/json' -d '{\"query\": \"\\' UNION SELECT username, password FROM users--\"}'"
+    },
+    "remediation": {
+      "summary": "Use parameterized queries or prepared statements instead of string concatenation for SQL queries.",
+      "code_example": {
+        "language": "javascript",
+        "vulnerable": "const query = `SELECT * FROM users WHERE name LIKE '%${userInput}%'`;",
+        "secure": "const query = 'SELECT * FROM users WHERE name LIKE ?';\ndb.execute(query, [`%${userInput}%`]);"
+      },
+      "references": [
+        "https://owasp.org/www-community/attacks/SQL_Injection",
+        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+      ]
+    },
+    "compliance": {
+      "pci_dss": ["6.5.1"],
+      "owasp_top_10": ["A03:2021"],
+      "cis": ["18.9"]
+    },
+    "first_seen": "2024-01-15T12:30:00Z",
+    "created_at": "2024-01-15T12:30:00Z",
+    "updated_at": "2024-01-15T12:30:00Z"
+  }
+}
+```
+
+## Update Finding Status
+
+Update the status of a finding (e.g., mark as fixed or false positive).
+
+```bash
+PATCH /v1/findings/{finding_id}
+```
+
+### Request
+
+```json
+{
+  "status": "fixed",
+  "notes": "Patched in commit abc123. Deployed to production on 2024-01-16."
+}
+```
+
+### Valid Status Values
+
+| Status | Description |
+|--------|-------------|
+| `open` | Finding is unresolved |
+| `fixed` | Vulnerability has been remediated |
+| `accepted` | Risk accepted, won't fix |
+| `false_positive` | Finding is not a real vulnerability |
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "finding_xyz789",
+    "status": "fixed",
+    "notes": "Patched in commit abc123. Deployed to production on 2024-01-16.",
+    "updated_at": "2024-01-16T09:00:00Z",
+    "updated_by": "user@example.com"
+  }
+}
+```
+
+## Bulk Update Findings
+
+Update multiple findings at once.
+
+```bash
+PATCH /v1/findings/bulk
+```
+
+### Request
+
+```json
+{
+  "finding_ids": ["finding_abc", "finding_def", "finding_ghi"],
+  "status": "accepted",
+  "notes": "Legacy code scheduled for deprecation in Q2"
+}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "updated_count": 3,
+    "findings": [
+      {"id": "finding_abc", "status": "accepted"},
+      {"id": "finding_def", "status": "accepted"},
+      {"id": "finding_ghi", "status": "accepted"}
+    ]
+  }
+}
+```
+
+## Get Finding Statistics
+
+Get aggregated statistics for findings.
+
+```bash
+GET /v1/findings/stats
+```
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `scan_id` | string | Filter by scan ID |
+| `date_from` | string | Start date (ISO 8601) |
+| `date_to` | string | End date (ISO 8601) |
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "total": 156,
+    "by_severity": {
+      "critical": 5,
+      "high": 18,
+      "medium": 47,
+      "low": 72,
+      "info": 14
+    },
+    "by_status": {
+      "open": 23,
+      "fixed": 98,
+      "accepted": 30,
+      "false_positive": 5
+    },
+    "by_category": {
+      "injection": 12,
+      "authentication": 8,
+      "access_control": 15,
+      "xss": 9,
+      "misconfiguration": 25
+    },
+    "trends": {
+      "new_this_week": 8,
+      "fixed_this_week": 15,
+      "mean_time_to_fix": "4.2 days"
+    }
+  }
+}
+```
+
+## Export Findings
+
+Export findings in various formats.
+
+```bash
+GET /v1/findings/export
+```
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `scan_id` | string | Required. Scan ID to export |
+| `format` | string | Export format: `json`, `csv`, `sarif`, `xml` |
+| `severity` | string | Filter by severity |
+
+### Request
+
+```bash
+curl -X GET "https://api.aiptx.io/v1/findings/export?scan_id=scan_abc123&format=sarif" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o findings.sarif
+```
+
+### SARIF Output Example
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [{
+    "tool": {
+      "driver": {
+        "name": "AIPTx",
+        "version": "1.0.0",
+        "informationUri": "https://aiptx.io"
+      }
+    },
+    "results": [{
+      "ruleId": "sql-injection",
+      "level": "error",
+      "message": {
+        "text": "SQL Injection in User Search"
+      },
+      "locations": [{
+        "physicalLocation": {
+          "artifactLocation": {
+            "uri": "/api/users/search"
+          }
+        }
+      }]
+    }]
+  }]
+}
+```

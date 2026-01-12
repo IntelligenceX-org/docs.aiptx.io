@@ -1,0 +1,217 @@
+---
+title: API Introduction
+description: 'Getting started with the AIPTx REST API'
+---
+
+# API Introduction
+
+The AIPTx API provides programmatic access to all platform features, enabling you to integrate AI-powered penetration testing into your workflows.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://api.aiptx.io/v1
+```
+
+## Authentication
+
+The AIPTx API uses Bearer token authentication. Include your API key in the `Authorization` header:
+
+```bash
+curl -X GET "https://api.aiptx.io/v1/scans" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Getting Your API Key
+
+1. Log in to the [AIPTx Dashboard](https://app.aiptx.io)
+2. Navigate to **Settings** → **API Keys**
+3. Click **Generate New Key**
+4. Copy and securely store your key
+
+<Warning>
+API keys provide full access to your account. Never share them or commit them to version control. Use environment variables instead.
+</Warning>
+
+## Request Format
+
+### Headers
+
+All requests should include:
+
+```
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+Accept: application/json
+```
+
+### Request Body
+
+POST and PUT requests accept JSON bodies:
+
+```json
+{
+  "target": "https://example.com",
+  "mode": "standard",
+  "options": {
+    "authentication": {
+      "type": "bearer",
+      "token": "your_app_token"
+    }
+  }
+}
+```
+
+## Response Format
+
+All responses are returned in JSON format:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "scan_abc123",
+    "status": "running",
+    "created_at": "2024-01-15T10:30:00Z"
+  },
+  "meta": {
+    "request_id": "req_xyz789"
+  }
+}
+```
+
+### Error Responses
+
+Errors follow a consistent format:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_TARGET",
+    "message": "The provided target URL is not accessible",
+    "details": {
+      "target": "https://invalid.example.com",
+      "reason": "DNS resolution failed"
+    }
+  },
+  "meta": {
+    "request_id": "req_xyz789"
+  }
+}
+```
+
+## HTTP Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `201` | Resource created |
+| `400` | Bad request - Invalid parameters |
+| `401` | Unauthorized - Invalid or missing API key |
+| `403` | Forbidden - Insufficient permissions |
+| `404` | Not found - Resource doesn't exist |
+| `429` | Rate limited - Too many requests |
+| `500` | Server error - Something went wrong |
+
+## Rate Limits
+
+API requests are rate limited based on your plan:
+
+| Plan | Requests/minute | Concurrent Scans |
+|------|-----------------|------------------|
+| Starter | 60 | 1 |
+| Professional | 120 | 4 |
+| Business | 300 | 10 |
+| Enterprise | Custom | Custom |
+
+Rate limit headers are included in every response:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 58
+X-RateLimit-Reset: 1705312800
+```
+
+## Pagination
+
+List endpoints support pagination:
+
+```bash
+GET /v1/scans?page=1&limit=20
+```
+
+Paginated responses include metadata:
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 156,
+    "total_pages": 8
+  }
+}
+```
+
+## Versioning
+
+The API is versioned via the URL path (`/v1/`). We maintain backward compatibility within major versions. Breaking changes will be introduced in new major versions with advance notice.
+
+## SDKs
+
+Official SDKs are available for popular languages:
+
+<CardGroup cols={2}>
+  <Card title="Python SDK" icon="python" href="https://github.com/aiptx/python-sdk">
+    ```bash
+    pip install aiptx
+    ```
+  </Card>
+  <Card title="Node.js SDK" icon="node-js" href="https://github.com/aiptx/node-sdk">
+    ```bash
+    npm install @aiptx/sdk
+    ```
+  </Card>
+  <Card title="Go SDK" icon="golang" href="https://github.com/aiptx/go-sdk">
+    ```bash
+    go get github.com/aiptx/go-sdk
+    ```
+  </Card>
+  <Card title="Ruby SDK" icon="gem" href="https://github.com/aiptx/ruby-sdk">
+    ```bash
+    gem install aiptx
+    ```
+  </Card>
+</CardGroup>
+
+## Quick Example
+
+Here's a complete example of starting a scan and retrieving results:
+
+```python
+import aiptx
+
+# Initialize client
+client = aiptx.Client(api_key="YOUR_API_KEY")
+
+# Start a scan
+scan = client.scans.create(
+    target="https://example.com",
+    mode="standard"
+)
+
+print(f"Scan started: {scan.id}")
+
+# Wait for completion
+scan.wait_for_completion()
+
+# Get findings
+findings = client.findings.list(scan_id=scan.id)
+
+for finding in findings:
+    print(f"[{finding.severity}] {finding.title}")
+```

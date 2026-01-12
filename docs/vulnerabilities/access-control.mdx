@@ -1,0 +1,321 @@
+---
+title: Access Control Vulnerabilities
+description: 'IDOR, privilege escalation, and authorization testing'
+---
+
+# Access Control Vulnerabilities
+
+Access control vulnerabilities occur when users can access resources or perform actions beyond their intended permissions. AIPTx comprehensively tests authorization mechanisms.
+
+## Insecure Direct Object References (IDOR)
+
+### What is IDOR?
+
+IDOR occurs when an application uses user-supplied input to access objects directly without proper authorization checks.
+
+### Testing Methodology
+
+AIPTx tests IDOR by:
+
+1. **Object ID Discovery** - Identifying all object references
+2. **Permission Boundary Testing** - Accessing objects across user contexts
+3. **Parameter Manipulation** - Testing IDs, UUIDs, filenames
+4. **Response Analysis** - Comparing authorized vs unauthorized access
+
+### Common IDOR Locations
+
+| Endpoint Pattern | Risk | Example |
+|------------------|------|---------|
+| `/api/users/{id}` | High | User profile access |
+| `/api/orders/{id}` | High | Order details |
+| `/api/documents/{id}` | Critical | Sensitive documents |
+| `/api/invoices/{id}` | High | Financial data |
+| `/download/{filename}` | Critical | File download |
+
+### Example Finding
+
+```json
+{
+  "title": "IDOR in Order API",
+  "severity": "high",
+  "endpoint": "GET /api/orders/12345",
+  "description": "Any authenticated user can access any order by ID",
+  "poc": {
+    "authenticated_as": "user_a@example.com",
+    "accessed_order": "Order #12345 belonging to user_b@example.com",
+    "data_exposed": ["billing_address", "items", "total", "payment_method"]
+  }
+}
+```
+
+## Privilege Escalation
+
+### Horizontal Privilege Escalation
+
+Accessing resources of users with the same privilege level.
+
+```json
+{
+  "title": "Horizontal Privilege Escalation",
+  "description": "User A can modify User B's profile",
+  "poc": {
+    "attacker": "user_a (ID: 100)",
+    "victim": "user_b (ID: 200)",
+    "request": "PUT /api/users/200",
+    "result": "Profile updated successfully"
+  }
+}
+```
+
+### Vertical Privilege Escalation
+
+Gaining elevated privileges beyond assigned role.
+
+```json
+{
+  "title": "Vertical Privilege Escalation",
+  "description": "Regular user can access admin functions",
+  "poc": {
+    "user_role": "user",
+    "accessed_endpoint": "GET /api/admin/users",
+    "result": "Full user list with admin data returned"
+  }
+}
+```
+
+### Role Manipulation
+
+Testing for role modification vulnerabilities:
+
+```http
+PUT /api/users/profile HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "role": "admin"    // Role injection attempt
+}
+```
+
+## Missing Function Level Access Control
+
+### Unprotected Admin Endpoints
+
+| Endpoint | Expected | Actual |
+|----------|----------|--------|
+| `/admin/dashboard` | Admin only | All authenticated |
+| `/api/admin/users` | Admin only | All authenticated |
+| `/api/admin/config` | Admin only | Public |
+
+### Example Finding
+
+```json
+{
+  "title": "Missing Access Control on Admin API",
+  "severity": "critical",
+  "endpoint": "DELETE /api/admin/users/123",
+  "description": "Admin endpoints lack role verification",
+  "poc": {
+    "user_role": "regular_user",
+    "action": "Delete user account",
+    "result": "User 123 deleted successfully"
+  }
+}
+```
+
+## Forced Browsing
+
+### Testing Areas
+
+- Hidden admin pages
+- Backup files
+- Configuration files
+- Debug endpoints
+- API documentation
+
+### Common Paths Tested
+
+```
+/admin
+/administrator
+/console
+/debug
+/api/docs
+/swagger
+/graphql
+/.env
+/config.json
+/backup
+```
+
+## CORS Misconfiguration
+
+### Vulnerabilities Detected
+
+| Issue | Risk | Description |
+|-------|------|-------------|
+| Wildcard origin | Critical | `Access-Control-Allow-Origin: *` |
+| Null origin | High | Allows `null` origin |
+| Origin reflection | High | Reflects any origin |
+| Credentials with wildcard | Critical | Exposes auth cookies |
+
+### Example Finding
+
+```json
+{
+  "title": "CORS Misconfiguration Allows Credential Theft",
+  "severity": "critical",
+  "description": "API reflects origin and allows credentials",
+  "poc": {
+    "request_origin": "https://evil.com",
+    "response_headers": {
+      "Access-Control-Allow-Origin": "https://evil.com",
+      "Access-Control-Allow-Credentials": "true"
+    },
+    "impact": "Attacker can steal user data via malicious site"
+  }
+}
+```
+
+## Path Traversal
+
+### File Access Testing
+
+```
+# Basic traversal
+../../../etc/passwd
+..%2f..%2f..%2fetc/passwd
+
+# Encoded variations
+%2e%2e%2f
+%252e%252e%252f
+..%c0%af
+
+# Null byte
+../../../etc/passwd%00.png
+```
+
+### Example Finding
+
+```json
+{
+  "title": "Path Traversal in File Download",
+  "severity": "critical",
+  "endpoint": "GET /api/files/download",
+  "parameter": "filename",
+  "poc": {
+    "payload": "filename=../../../etc/passwd",
+    "result": "Server configuration file contents returned"
+  }
+}
+```
+
+## API Authorization Testing
+
+### REST API Testing
+
+```yaml
+tests:
+  - name: "User can only access own resources"
+    steps:
+      - login_as: user_a
+      - request: GET /api/users/user_b/orders
+      - expect: 403 Forbidden
+
+  - name: "Users cannot modify other users"
+    steps:
+      - login_as: user_a
+      - request: PUT /api/users/user_b
+      - expect: 403 Forbidden
+```
+
+### GraphQL Authorization
+
+```graphql
+# Test unauthorized field access
+query {
+  user(id: "other_user_id") {
+    email
+    password    # Should be forbidden
+    creditCards # Should be forbidden
+  }
+}
+
+# Test mutation authorization
+mutation {
+  deleteUser(id: "other_user_id") {
+    success
+  }
+}
+```
+
+## Remediation Guidelines
+
+<AccordionGroup>
+  <Accordion title="IDOR Prevention">
+    ```javascript
+    // Always verify ownership
+    async function getOrder(orderId, userId) {
+      const order = await Order.findById(orderId);
+
+      if (!order) {
+        throw new NotFoundError();
+      }
+
+      // Verify the order belongs to the user
+      if (order.userId !== userId) {
+        throw new ForbiddenError();
+      }
+
+      return order;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Role-Based Access Control">
+    ```javascript
+    // Middleware for role checking
+    const requireRole = (allowedRoles) => {
+      return (req, res, next) => {
+        if (!allowedRoles.includes(req.user.role)) {
+          return res.status(403).json({
+            error: 'Insufficient permissions'
+          });
+        }
+        next();
+      };
+    };
+
+    // Usage
+    app.delete('/api/admin/users/:id',
+      authenticate,
+      requireRole(['admin']),
+      deleteUser
+    );
+    ```
+  </Accordion>
+
+  <Accordion title="Secure CORS Configuration">
+    ```javascript
+    const corsOptions = {
+      origin: (origin, callback) => {
+        const whitelist = [
+          'https://app.example.com',
+          'https://admin.example.com'
+        ];
+
+        if (whitelist.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+    };
+
+    app.use(cors(corsOptions));
+    ```
+  </Accordion>
+</AccordionGroup>

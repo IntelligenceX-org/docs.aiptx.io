@@ -1,0 +1,326 @@
+---
+title: GitLab CI/CD
+description: 'Integrate AIPTx security scanning into your GitLab pipelines'
+---
+
+# GitLab CI/CD Integration
+
+Add automated security testing to your GitLab CI/CD pipelines with AIPTx.
+
+## Quick Start
+
+Add to your `.gitlab-ci.yml`:
+
+```yaml
+include:
+  - remote: 'https://raw.githubusercontent.com/aiptx/gitlab-ci/main/templates/security-scan.yml'
+
+variables:
+  AIPTX_TARGET: https://staging.example.com
+  AIPTX_MODE: quick
+
+security_scan:
+  extends: .aiptx-scan
+  variables:
+    AIPTX_API_KEY: $AIPTX_API_KEY
+```
+
+## Setup
+
+### 1. Configure CI/CD Variables
+
+In your GitLab project:
+
+1. Go to **Settings** → **CI/CD** → **Variables**
+2. Add a new variable:
+   - Key: `AIPTX_API_KEY`
+   - Value: Your AIPTx API key
+   - Type: Variable
+   - Flags: ✅ Mask variable, ✅ Protect variable
+
+### 2. Basic Pipeline Configuration
+
+```yaml
+stages:
+  - build
+  - test
+  - security
+  - deploy
+
+security_scan:
+  stage: security
+  image: aiptx/cli:latest
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - aiptx scan $AIPTX_TARGET --mode $AIPTX_MODE --output json > results.json
+    - |
+      CRITICAL=$(jq '.findings | map(select(.severity == "critical")) | length' results.json)
+      HIGH=$(jq '.findings | map(select(.severity == "high")) | length' results.json)
+      if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+        echo "Security scan failed: $CRITICAL critical, $HIGH high findings"
+        exit 1
+      fi
+  artifacts:
+    reports:
+      sast: results.json
+    paths:
+      - results.json
+    when: always
+  variables:
+    AIPTX_TARGET: https://staging.example.com
+    AIPTX_MODE: standard
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+```
+
+## Configuration Options
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AIPTX_API_KEY` | AIPTx API key (required) | - |
+| `AIPTX_TARGET` | Target URL to scan | - |
+| `AIPTX_MODE` | Scan mode: quick, standard, deep | standard |
+| `AIPTX_TYPE` | Scan type: web, api, network, full | web |
+| `AIPTX_FAIL_ON` | Fail on severity level | critical |
+| `AIPTX_TIMEOUT` | Scan timeout in minutes | 60 |
+
+## Pipeline Examples
+
+### Merge Request Scanning
+
+Scan review apps on merge requests:
+
+```yaml
+stages:
+  - deploy-review
+  - security
+  - cleanup
+
+deploy_review:
+  stage: deploy-review
+  script:
+    - deploy_review_app
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    url: https://$CI_COMMIT_REF_SLUG.review.example.com
+    on_stop: stop_review
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+
+security_scan_review:
+  stage: security
+  image: aiptx/cli:latest
+  needs: ["deploy_review"]
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - |
+      aiptx scan "https://$CI_COMMIT_REF_SLUG.review.example.com" \
+        --mode quick \
+        --wait \
+        --output json > scan-results.json
+    - aiptx findings export --format sarif > gl-sast-report.json
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+
+stop_review:
+  stage: cleanup
+  script:
+    - stop_review_app
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    action: stop
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      when: manual
+```
+
+### Scheduled Security Audits
+
+```yaml
+security_audit:
+  stage: security
+  image: aiptx/cli:latest
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - |
+      SCAN_ID=$(aiptx scan $PRODUCTION_URL \
+        --mode deep \
+        --wait \
+        --output json | jq -r '.scan_id')
+    - aiptx report generate --scan-id $SCAN_ID --format pdf --output report.pdf
+    - aiptx report generate --scan-id $SCAN_ID --format csv --output findings.csv
+  artifacts:
+    paths:
+      - report.pdf
+      - findings.csv
+    expire_in: 30 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  variables:
+    PRODUCTION_URL: https://app.example.com
+```
+
+### Multi-Stage Pipeline
+
+```yaml
+stages:
+  - build
+  - test
+  - security-quick
+  - deploy-staging
+  - security-standard
+  - deploy-production
+
+build:
+  stage: build
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+unit_tests:
+  stage: test
+  script:
+    - npm run test
+
+quick_security_scan:
+  stage: security-quick
+  image: aiptx/cli:latest
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - aiptx scan $STAGING_URL --mode quick --fail-on critical
+  allow_failure: false
+
+deploy_staging:
+  stage: deploy-staging
+  script:
+    - deploy_to_staging
+  environment:
+    name: staging
+    url: $STAGING_URL
+
+standard_security_scan:
+  stage: security-standard
+  image: aiptx/cli:latest
+  needs: ["deploy_staging"]
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - |
+      aiptx scan $STAGING_URL \
+        --mode standard \
+        --wait \
+        --output json > results.json
+    - |
+      CRITICAL=$(jq '.findings_count.critical' results.json)
+      HIGH=$(jq '.findings_count.high' results.json)
+      if [ "$CRITICAL" -gt 0 ]; then
+        echo "Blocking: $CRITICAL critical vulnerabilities found"
+        exit 1
+      fi
+      if [ "$HIGH" -gt 2 ]; then
+        echo "Blocking: More than 2 high vulnerabilities found"
+        exit 1
+      fi
+  artifacts:
+    reports:
+      sast: results.json
+
+deploy_production:
+  stage: deploy-production
+  script:
+    - deploy_to_production
+  environment:
+    name: production
+    url: $PRODUCTION_URL
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+```
+
+### Using Configuration File
+
+```yaml
+security_scan:
+  stage: security
+  image: aiptx/cli:latest
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - aiptx scan --config ./aiptx.gitlab.yaml
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+```
+
+With `aiptx.gitlab.yaml`:
+
+```yaml
+target:
+  urls:
+    - ${STAGING_URL}
+
+scan:
+  mode: standard
+  type: full
+
+authentication:
+  type: bearer
+  token: ${TEST_AUTH_TOKEN}
+
+scope:
+  exclude:
+    - /health
+    - /metrics
+
+output:
+  format: sarif
+  file: gl-sast-report.json
+```
+
+## GitLab Security Dashboard Integration
+
+Export findings in SARIF format for GitLab's Security Dashboard:
+
+```yaml
+security_scan:
+  stage: security
+  image: aiptx/cli:latest
+  script:
+    - aiptx auth set-key $AIPTX_API_KEY
+    - aiptx scan $TARGET_URL --mode standard --wait
+    - aiptx findings export --format sarif --output gl-sast-report.json
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    paths:
+      - gl-sast-report.json
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Pipeline timeout">
+    Increase job timeout or use quick mode:
+    ```yaml
+    security_scan:
+      timeout: 4 hours
+      variables:
+        AIPTX_MODE: quick
+    ```
+  </Accordion>
+
+  <Accordion title="Target not accessible">
+    Ensure the target URL is accessible from GitLab runners. For private networks, use self-managed runners.
+  </Accordion>
+
+  <Accordion title="Variable not found">
+    Verify variables are defined at the correct scope (project, group, or instance) and are not protected if running on unprotected branches.
+  </Accordion>
+</AccordionGroup>
