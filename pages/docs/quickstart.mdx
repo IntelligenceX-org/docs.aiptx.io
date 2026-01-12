@@ -1,0 +1,158 @@
+---
+title: Quick Start
+description: 'Get your first AIPTx scan running in under 5 minutes'
+---
+
+# Quick Start Guide
+
+This guide will help you run your first penetration test with AIPTx.
+
+## Prerequisites
+
+- An AIPTx account ([Sign up here](https://aiptx.io/signup))
+- Node.js 18+ or Python 3.9+
+- Access to the target application you want to test
+
+> **Warning:**
+>
+  Only test applications you own or have explicit written authorization to test. Unauthorized testing is illegal.
+
+
+## Installation
+
+
+  #### npm
+
+    ```bash
+    npm install -g @aiptx/cli
+    ```
+  
+  #### pip
+
+    ```bash
+    pip install aiptx
+    ```
+  
+  #### brew
+
+    ```bash
+    brew install aiptx/tap/aiptx
+    ```
+  
+
+
+## Authentication
+
+Authenticate the CLI with your API key:
+
+```bash
+aiptx auth login
+```
+
+Or set your API key as an environment variable:
+
+```bash
+export AIPTX_API_KEY=your_api_key_here
+```
+
+<Info>
+  Find your API key in the [AIPTx Dashboard](https://dashboard.aiptx.io/settings/api-keys)
+</Info>
+
+## Run Your First Scan
+
+### Basic Web Application Scan
+
+```bash
+aiptx scan https://your-app.com
+```
+
+### API Scan with OpenAPI Specification
+
+```bash
+aiptx scan https://api.your-app.com --openapi ./openapi.yaml
+```
+
+### Authenticated Scan
+
+```bash
+aiptx scan https://your-app.com \
+  --auth-type bearer \
+  --auth-token "your_jwt_token"
+```
+
+## Understanding Scan Output
+
+During the scan, you'll see real-time progress:
+
+```
+AIPTx v2.0.0 - AI-Powered Penetration Testing
+
+Target: https://your-app.com
+Mode: Full Scan
+
+[*] Reconnaissance phase...
+    Found 47 endpoints
+    Identified 3 authentication flows
+
+[*] Testing for vulnerabilities...
+    Testing: SQL Injection
+    Testing: Cross-Site Scripting
+    Testing: Authentication Bypass
+
+[!] CRITICAL: SQL Injection found
+    Endpoint: POST /api/users/search
+    Parameter: query
+    PoC: ' OR '1'='1' --
+
+[!] HIGH: Stored XSS found
+    Endpoint: POST /api/comments
+    Parameter: body
+    PoC: <script>alert(document.cookie)</script>
+
+Scan complete in 12m 34s
+Findings: 2 Critical, 1 High, 4 Medium, 7 Low
+```
+
+## View Results
+
+### In Terminal
+
+```bash
+aiptx findings list --scan-id abc123
+```
+
+### Generate Report
+
+```bash
+aiptx report generate --scan-id abc123 --format pdf
+```
+
+### View in Dashboard
+
+Open [dashboard.aiptx.io](https://dashboard.aiptx.io) to see detailed findings with:
+- Full proof-of-concept exploits
+- Step-by-step remediation guidance
+- Compliance mapping
+- Trend analysis
+
+## Next Steps
+
+
+  ### Scan Modes
+
+    Learn about different scanning modes and when to use them
+  
+  ### CI/CD Integration
+
+    Set up automated security testing in your pipeline
+  
+  ### Authentication Testing
+
+    Configure complex authentication scenarios
+  
+  ### API Reference
+
+    Build custom integrations with our API
+  
+

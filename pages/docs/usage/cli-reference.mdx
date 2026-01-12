@@ -1,0 +1,275 @@
+---
+title: CLI Reference
+description: 'Complete command-line interface documentation for AIPTx'
+---
+
+# CLI Reference
+
+The AIPTx CLI provides full control over your penetration testing workflow from the command line.
+
+## Installation
+
+
+  #### npm
+
+    ```bash
+    npm install -g @aiptx/cli
+    ```
+  
+  #### pip
+
+    ```bash
+    pip install aiptx
+    ```
+  
+  #### brew
+
+    ```bash
+    brew install aiptx/tap/aiptx
+    ```
+  
+  #### Docker
+
+    ```bash
+    docker pull aiptx/cli:latest
+    ```
+  
+
+
+## Authentication
+
+### Login
+
+```bash
+aiptx auth login
+```
+
+Opens a browser for OAuth authentication with your AIPTx account.
+
+### Using API Key
+
+```bash
+export AIPTX_API_KEY=your_api_key_here
+# or
+aiptx auth set-key your_api_key_here
+```
+
+### Check Auth Status
+
+```bash
+aiptx auth status
+```
+
+## Scanning Commands
+
+### aiptx scan
+
+Start a new penetration test scan.
+
+```bash
+aiptx scan <target> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `target` | URL, IP address, or domain to scan |
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--mode` | Scan mode: `quick`, `standard`, `deep` | `standard` |
+| `--type` | Scan type: `web`, `api`, `network`, `full` | `web` |
+| `--openapi` | Path to OpenAPI/Swagger specification | - |
+| `--auth-type` | Authentication type: `bearer`, `basic`, `cookie`, `custom` | - |
+| `--auth-token` | Authentication token or credentials | - |
+| `--headers` | Custom headers (JSON format) | - |
+| `--exclude` | Endpoints to exclude (comma-separated) | - |
+| `--output` | Output format: `json`, `table`, `quiet` | `table` |
+| `--wait` | Wait for scan to complete | `true` |
+
+**Examples:**
+
+```bash
+# Basic web scan
+aiptx scan https://example.com
+
+# API scan with OpenAPI spec
+aiptx scan https://api.example.com --type api --openapi ./openapi.yaml
+
+# Authenticated scan
+aiptx scan https://app.example.com \
+  --auth-type bearer \
+  --auth-token "eyJhbGciOiJIUzI1NiIs..."
+
+# Deep scan with custom headers
+aiptx scan https://example.com \
+  --mode deep \
+  --headers '{"X-Custom-Header": "value"}'
+
+# Quick scan excluding certain paths
+aiptx scan https://example.com \
+  --mode quick \
+  --exclude "/admin,/internal"
+```
+
+### aiptx scan list
+
+List all scans in your account.
+
+```bash
+aiptx scan list [options]
+```
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--status` | Filter by status: `running`, `completed`, `failed` | - |
+| `--limit` | Number of results | `20` |
+| `--format` | Output format: `json`, `table` | `table` |
+
+### aiptx scan status
+
+Check the status of a running scan.
+
+```bash
+aiptx scan status <scan-id>
+```
+
+### aiptx scan cancel
+
+Cancel a running scan.
+
+```bash
+aiptx scan cancel <scan-id>
+```
+
+## Findings Commands
+
+### aiptx findings list
+
+List findings from a scan.
+
+```bash
+aiptx findings list --scan-id <scan-id> [options]
+```
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--severity` | Filter by severity: `critical`, `high`, `medium`, `low` | - |
+| `--status` | Filter by status: `open`, `fixed`, `accepted` | - |
+| `--format` | Output format: `json`, `table` | `table` |
+
+### aiptx findings get
+
+Get detailed information about a specific finding.
+
+```bash
+aiptx findings get <finding-id>
+```
+
+### aiptx findings export
+
+Export findings to a file.
+
+```bash
+aiptx findings export --scan-id <scan-id> --format csv --output findings.csv
+```
+
+## Report Commands
+
+### aiptx report generate
+
+Generate a penetration test report.
+
+```bash
+aiptx report generate --scan-id <scan-id> [options]
+```
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--format` | Report format: `pdf`, `html`, `json`, `csv` | `pdf` |
+| `--template` | Report template: `executive`, `technical`, `compliance` | `technical` |
+| `--compliance` | Compliance framework: `soc2`, `iso27001`, `pci`, `hipaa` | - |
+| `--output` | Output file path | `./report.pdf` |
+
+**Examples:**
+
+```bash
+# Generate PDF report
+aiptx report generate --scan-id abc123 --format pdf
+
+# Generate compliance report for SOC 2
+aiptx report generate --scan-id abc123 \
+  --template compliance \
+  --compliance soc2
+
+# Export to multiple formats
+aiptx report generate --scan-id abc123 --format pdf --output report.pdf
+aiptx report generate --scan-id abc123 --format csv --output findings.csv
+```
+
+## Configuration Commands
+
+### aiptx config set
+
+Set a configuration value.
+
+```bash
+aiptx config set <key> <value>
+```
+
+**Available Keys:**
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `default_mode` | Default scan mode | `standard` |
+| `output_format` | Default output format | `table` |
+| `auto_report` | Generate report after scan | `false` |
+| `notifications` | Enable notifications | `true` |
+
+### aiptx config get
+
+Get a configuration value.
+
+```bash
+aiptx config get <key>
+```
+
+### aiptx config list
+
+List all configuration values.
+
+```bash
+aiptx config list
+```
+
+## Global Options
+
+These options are available for all commands:
+
+| Option | Description |
+|--------|-------------|
+| `--help`, `-h` | Show help for a command |
+| `--version`, `-v` | Show CLI version |
+| `--verbose` | Enable verbose output |
+| `--quiet`, `-q` | Suppress non-essential output |
+| `--no-color` | Disable colored output |
+
+## Exit Codes
+
+| Code | Description |
+|------|-------------|
+| `0` | Success |
+| `1` | General error |
+| `2` | Invalid arguments |
+| `3` | Authentication error |
+| `4` | Network error |
+| `5` | Scan failed |

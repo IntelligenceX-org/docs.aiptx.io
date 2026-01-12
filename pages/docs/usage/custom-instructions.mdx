@@ -1,0 +1,289 @@
+---
+title: Custom Instructions
+description: 'Guide AI agents with custom testing instructions'
+---
+
+# Custom Instructions
+
+Custom instructions allow you to guide AIPTx's AI agents with specific testing requirements, business context, and focus areas.
+
+## Why Use Custom Instructions?
+
+AIPTx's AI agents are powerful, but they work even better with context about your application:
+
+- **Business Logic** - Explain critical workflows that need testing
+- **Focus Areas** - Direct attention to high-risk functionality
+- **Exclusions** - Prevent testing of sensitive operations
+- **Context** - Provide application-specific knowledge
+
+## Basic Usage
+
+### Command Line
+
+```bash
+aiptx scan https://example.com \
+  --instructions "Focus on the payment flow. Test for price manipulation and checkout bypass."
+```
+
+### Configuration File
+
+```yaml
+# aiptx.yaml
+instructions: |
+  This is an e-commerce application.
+
+  Critical areas to test:
+  - Payment processing at /checkout
+  - User authentication at /login
+  - Order management at /api/orders
+
+  Business logic concerns:
+  - Coupon code abuse
+  - Inventory manipulation
+  - Price tampering
+```
+
+## Instruction Categories
+
+### Business Context
+
+Provide context about your application:
+
+```yaml
+instructions: |
+  Application Type: Healthcare patient portal
+
+  User Roles:
+  - Patient: Can view own records, schedule appointments
+  - Doctor: Can view patient records, add notes
+  - Admin: Full system access
+
+  Sensitive Data:
+  - Patient health records (PHI)
+  - Payment information
+  - Personal identifiers
+```
+
+### Focus Areas
+
+Direct testing to specific functionality:
+
+```yaml
+instructions: |
+  Priority Testing Areas:
+
+  1. HIGH: Authentication System
+     - Test password reset flow for account takeover
+     - Check session management for fixation/hijacking
+     - Verify MFA bypass attempts
+
+  2. HIGH: API Authorization
+     - Test IDOR on /api/users/{id}
+     - Check horizontal privilege escalation
+     - Verify role-based access controls
+
+  3. MEDIUM: File Upload
+     - Test /api/upload for malicious files
+     - Check for path traversal
+     - Verify file type validation
+```
+
+### Testing Constraints
+
+Specify what to avoid:
+
+```yaml
+instructions: |
+  DO NOT:
+  - Test the /api/billing/charge endpoint (live payments)
+  - Attempt to delete any data
+  - Test user IDs above 1000 (production users)
+  - Send more than 100 requests to /api/reports
+
+  SAFE TEST DATA:
+  - Use test user: test@example.com
+  - Use test card: 4111111111111111
+  - Use coupon codes starting with TEST_
+```
+
+### Vulnerability Specifics
+
+Request specific vulnerability testing:
+
+```yaml
+instructions: |
+  Specific Vulnerabilities to Test:
+
+  SQL Injection:
+  - Focus on search functionality at /api/search
+  - Test filter parameters on /api/products
+  - Check order_by parameter for injection
+
+  XSS:
+  - Test all user-generated content fields
+  - Check profile name, bio, and comments
+  - Test markdown rendering in /api/posts
+
+  SSRF:
+  - Test URL input at /api/fetch-preview
+  - Check webhook configuration at /api/webhooks
+```
+
+## Advanced Instructions
+
+### Multi-Step Workflows
+
+Guide testing of complex flows:
+
+```yaml
+instructions: |
+  Test the complete checkout workflow:
+
+  1. Add items to cart
+     - Endpoint: POST /api/cart/add
+     - Test: Price manipulation, quantity overflow
+
+  2. Apply discount
+     - Endpoint: POST /api/cart/discount
+     - Test: Invalid codes, expired codes, reuse
+
+  3. Checkout
+     - Endpoint: POST /api/checkout
+     - Test: Race conditions, payment bypass
+
+  4. Order confirmation
+     - Endpoint: GET /api/orders/{id}
+     - Test: IDOR to other users' orders
+```
+
+### Role-Based Testing
+
+Test with different user contexts:
+
+```yaml
+instructions: |
+  Test with multiple user roles:
+
+  Anonymous User:
+  - Should NOT access /api/users
+  - Should NOT access /api/admin
+  - Can access /api/products (read-only)
+
+  Regular User (test@example.com):
+  - Should access own profile only
+  - Should NOT access other users' data
+  - Should NOT access admin endpoints
+
+  Admin User (admin@example.com):
+  - Test admin functionality thoroughly
+  - Verify audit logging works
+  - Check for privilege persistence
+```
+
+### API-Specific Instructions
+
+For API testing:
+
+```yaml
+instructions: |
+  GraphQL API Testing:
+
+  - Test introspection at /graphql
+  - Check for query depth limits
+  - Test batch queries for DoS
+  - Verify field-level authorization
+
+  Specific Queries to Test:
+
+  query {
+    user(id: "FUZZ") {
+      email
+      password  # Should be forbidden
+      orders {
+        paymentInfo  # Should be forbidden
+      }
+    }
+  }
+```
+
+## Best Practices
+
+
+  #### Be Specific
+
+    Instead of "test authentication," specify:
+    - Which endpoints handle auth
+    - What auth methods are used
+    - Known weak points to focus on
+  
+
+  #### Provide Context
+
+    Help the AI understand your business:
+    - What does your application do?
+    - Who are your users?
+    - What data is most sensitive?
+  
+
+  #### Set Boundaries
+
+    Clearly state what NOT to test:
+    - Production payment endpoints
+    - Delete operations
+    - Rate-limited services
+  
+
+  #### Include Test Data
+
+    Provide safe test credentials:
+    - Test user accounts
+    - API keys for testing
+    - Sample data to use
+  
+
+
+## Example: Complete Configuration
+
+```yaml
+# aiptx.yaml - Complete example
+target:
+  urls:
+    - https://app.example.com
+    - https://api.example.com
+
+scan:
+  mode: standard
+
+authentication:
+  type: bearer
+  token: ${TEST_TOKEN}
+
+instructions: |
+  Application: SaaS project management tool
+
+  User Roles:
+  - Viewer: Read-only access to assigned projects
+  - Member: Can create/edit tasks in assigned projects
+  - Admin: Full project management, user management
+  - Super Admin: System-wide access
+
+  Critical Endpoints:
+  - POST /api/projects - Project creation (test authz)
+  - PUT /api/users/{id}/role - Role changes (test privilege escalation)
+  - DELETE /api/projects/{id} - Project deletion (test IDOR)
+
+  Business Logic:
+  - Users should only see projects they're assigned to
+  - Only admins can invite new users
+  - Billing is handled by Stripe (don't test /api/billing)
+
+  Test Users:
+  - viewer@test.com (Viewer role, Project ID: 1)
+  - member@test.com (Member role, Project IDs: 1, 2)
+  - admin@test.com (Admin role, all projects)
+
+  DO NOT:
+  - Test with user IDs > 100
+  - Call DELETE endpoints
+  - Test /api/webhooks/stripe (production)
+```

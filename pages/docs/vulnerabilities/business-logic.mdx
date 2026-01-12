@@ -1,0 +1,333 @@
+---
+title: Business Logic Vulnerabilities
+description: 'Workflow bypass, race conditions, and application logic testing'
+---
+
+# Business Logic Vulnerabilities
+
+Business logic vulnerabilities exploit flaws in the design and implementation of application workflows. These vulnerabilities are often unique to each application and require intelligent testing.
+
+## What are Business Logic Flaws?
+
+Unlike technical vulnerabilities (SQL injection, XSS), business logic flaws abuse legitimate functionality in unintended ways. They typically:
+
+- Cannot be detected by automated scanners (but AIPTx's AI can!)
+- Require understanding of application context
+- Exploit assumptions in application design
+- Have high business impact
+
+## Common Categories
+
+### Price Manipulation
+
+
+  ### Negative Quantities
+
+    Submitting negative item quantities for refunds
+  
+  ### Price Override
+
+    Modifying prices in client-side requests
+  
+  ### Currency Confusion
+
+    Exploiting currency conversion logic
+  
+  ### Discount Abuse
+
+    Stacking or manipulating discounts
+  
+
+
+### Example: Price Manipulation
+
+```json
+{
+  "title": "Price Manipulation in Cart API",
+  "severity": "critical",
+  "endpoint": "POST /api/cart/add",
+  "description": "Client-submitted price accepted without validation",
+  "poc": {
+    "original_request": {
+      "product_id": "123",
+      "quantity": 1,
+      "price": 99.99
+    },
+    "exploit_request": {
+      "product_id": "123",
+      "quantity": 1,
+      "price": 0.01
+    },
+    "result": "$99.99 item purchased for $0.01"
+  }
+}
+```
+
+## Race Conditions
+
+### Types Detected
+
+| Type | Description | Example |
+|------|-------------|---------|
+| TOCTOU | Time-of-check to time-of-use | Balance check vs debit |
+| Double Spending | Same resource used twice | Coupon reuse |
+| Concurrent Updates | Parallel modifications | Simultaneous withdrawals |
+
+### Testing Methodology
+
+AIPTx tests race conditions by:
+
+1. Identifying vulnerable operations (balance transfers, inventory updates)
+2. Sending concurrent requests with precise timing
+3. Analyzing state inconsistencies
+4. Validating exploitation
+
+### Example: Double Spending
+
+```json
+{
+  "title": "Race Condition in Coupon Redemption",
+  "severity": "high",
+  "endpoint": "POST /api/cart/apply-coupon",
+  "description": "Single-use coupon can be applied multiple times via race condition",
+  "poc": {
+    "coupon": "SAVE50",
+    "expected_uses": 1,
+    "concurrent_requests": 10,
+    "successful_applications": 8,
+    "total_discount": "$400 instead of $50"
+  }
+}
+```
+
+## Workflow Bypass
+
+### Authentication Workflow
+
+| Step | Bypass Test |
+|------|-------------|
+| 1. Login | Skip to step 2 |
+| 2. MFA | Skip to step 3 |
+| 3. Dashboard | Access directly |
+
+### Example: MFA Bypass
+
+```json
+{
+  "title": "MFA Workflow Bypass",
+  "severity": "critical",
+  "description": "MFA step can be skipped by accessing endpoints directly",
+  "poc": {
+    "normal_flow": "Login → MFA → Dashboard",
+    "bypass": "Login → Dashboard (skip MFA)",
+    "vulnerable_endpoint": "GET /api/user/dashboard",
+    "result": "Full account access without MFA"
+  }
+}
+```
+
+### Multi-Step Process Bypass
+
+Testing e-commerce checkout:
+
+```yaml
+normal_flow:
+  1: Add to cart
+  2: Enter shipping
+  3: Enter payment
+  4: Review order
+  5: Confirm purchase
+
+bypass_tests:
+  - skip_step_3: "Skip payment, proceed to confirmation"
+  - reorder_steps: "Submit order before payment"
+  - modify_between_steps: "Change price after review"
+```
+
+## Limit Bypass
+
+### Types
+
+- Rate limit bypass
+- Quantity limit bypass
+- Time-based restriction bypass
+- Geographic restriction bypass
+
+### Example: Rate Limit Bypass
+
+```json
+{
+  "title": "Rate Limit Bypass via Header Manipulation",
+  "severity": "medium",
+  "endpoint": "POST /api/password-reset",
+  "description": "Rate limiting bypassed by modifying X-Forwarded-For header",
+  "poc": {
+    "normal_limit": "5 requests per minute",
+    "bypass": "X-Forwarded-For: random-ip-each-request",
+    "result": "Unlimited password reset attempts"
+  }
+}
+```
+
+## Inventory Manipulation
+
+### Testing Scenarios
+
+```yaml
+scenarios:
+  - name: "Negative inventory"
+    test: "Order quantity exceeding stock"
+    expect: "Rejection"
+
+  - name: "Concurrent orders"
+    test: "Multiple orders for last item"
+    expect: "Only one succeeds"
+
+  - name: "Cart reservation"
+    test: "Items held in cart indefinitely"
+    expect: "Timeout and release"
+```
+
+## Feature Abuse
+
+### Common Abuse Patterns
+
+| Feature | Abuse | Impact |
+|---------|-------|--------|
+| Referral program | Self-referral | Financial loss |
+| Free trial | Unlimited trials | Revenue loss |
+| Promo codes | Code enumeration | Unauthorized discounts |
+| File upload | Storage abuse | Resource exhaustion |
+
+### Example: Referral Abuse
+
+```json
+{
+  "title": "Self-Referral Abuse",
+  "severity": "medium",
+  "description": "Users can refer themselves using different emails",
+  "poc": {
+    "referrer": "user@example.com",
+    "referee": "user+1@example.com",
+    "bonus_earned": "$10",
+    "validation_bypass": "Plus addressing not blocked"
+  }
+}
+```
+
+## Data Validation Flaws
+
+### Insufficient Validation
+
+```json
+{
+  "title": "Insufficient Input Validation",
+  "severity": "high",
+  "endpoint": "POST /api/transfer",
+  "description": "Transfer amount not properly validated",
+  "tests": [
+    {"amount": -100, "result": "Reverse transfer succeeded"},
+    {"amount": "100.999", "result": "Rounding error exploited"},
+    {"amount": 999999999, "result": "Integer overflow"}
+  ]
+}
+```
+
+## AI-Powered Detection
+
+AIPTx uses AI to detect business logic flaws by:
+
+1. **Understanding Context** - Analyzing application purpose and workflows
+2. **Identifying Assumptions** - Finding implicit business rules
+3. **Generating Test Cases** - Creating context-aware tests
+4. **Validating Results** - Confirming exploitability
+
+### AI Detection Examples
+
+```
+Context: E-commerce checkout
+AI Analysis: "Discount calculated client-side, not re-validated on server"
+Test: Modify discount percentage in request
+Result: 100% discount applied successfully
+```
+
+## Remediation Guidelines
+
+
+  #### Server-Side Validation
+
+    ```javascript
+    // Always calculate prices server-side
+    async function processOrder(cart, userId) {
+      // Fetch actual prices from database
+      const items = await Promise.all(
+        cart.items.map(async (item) => {
+          const product = await Product.findById(item.productId);
+          return {
+            ...item,
+            price: product.price, // Server-side price
+            total: product.price * item.quantity
+          };
+        })
+      );
+
+      // Calculate totals server-side
+      const subtotal = items.reduce((sum, i) => sum + i.total, 0);
+      const discount = await calculateDiscount(userId, subtotal);
+
+      return { items, subtotal, discount, total: subtotal - discount };
+    }
+    ```
+  
+
+  #### Race Condition Prevention
+
+    ```javascript
+    // Use database transactions with locking
+    async function redeemCoupon(couponCode, userId) {
+      return await db.transaction(async (trx) => {
+        // Lock the coupon row
+        const coupon = await trx('coupons')
+          .where('code', couponCode)
+          .forUpdate()
+          .first();
+
+        if (!coupon || coupon.used) {
+          throw new Error('Invalid or used coupon');
+        }
+
+        // Mark as used atomically
+        await trx('coupons')
+          .where('id', coupon.id)
+          .update({ used: true, used_by: userId });
+
+        return coupon.discount;
+      });
+    }
+    ```
+  
+
+  #### Workflow Enforcement
+
+    ```javascript
+    // Track workflow state
+    const workflowMiddleware = (requiredStep) => {
+      return (req, res, next) => {
+        const currentStep = req.session.checkoutStep;
+
+        if (currentStep < requiredStep) {
+          return res.status(400).json({
+            error: 'Please complete previous steps first'
+          });
+        }
+
+        next();
+      };
+    };
+
+    // Usage
+    app.post('/api/checkout/payment', workflowMiddleware(2), handlePayment);
+    app.post('/api/checkout/confirm', workflowMiddleware(3), handleConfirm);
+    ```
+  
+

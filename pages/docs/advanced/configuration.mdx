@@ -1,0 +1,307 @@
+---
+title: Advanced Configuration
+description: 'Deep dive into AIPTx configuration options'
+---
+
+# Advanced Configuration
+
+This guide covers advanced configuration options for fine-tuning AIPTx scans.
+
+## Configuration File
+
+Create an `aiptx.yaml` file for complex configurations:
+
+```yaml
+# aiptx.yaml - Complete configuration reference
+
+# Target Configuration
+target:
+  urls:
+    - https://app.example.com
+    - https://api.example.com
+
+  # Domain restrictions
+  domains:
+    include:
+      - example.com
+      - "*.example.com"
+    exclude:
+      - analytics.example.com
+
+# Scan Settings
+scan:
+  mode: standard  # quick, standard, deep
+  type: full      # web, api, network, full
+
+  # Concurrent settings
+  concurrency:
+    requests: 10
+    endpoints: 5
+
+  # Timeout settings
+  timeouts:
+    request: 30000      # ms
+    endpoint: 300000    # ms
+    scan: 14400000      # ms (4 hours)
+
+# Scope Configuration
+scope:
+  include:
+    - /api/*
+    - /app/*
+    - /users/*
+  exclude:
+    - /health
+    - /metrics
+    - /api/internal/*
+    - "*.pdf"
+    - "*.css"
+    - "*.js"
+    - "*.png"
+    - "*.jpg"
+
+# Authentication
+authentication:
+  type: bearer  # bearer, basic, cookie, custom, login
+  token: ${AIPTX_AUTH_TOKEN}
+
+  # For login-based auth
+  login:
+    url: https://app.example.com/login
+    method: POST
+    body:
+      email: ${TEST_USER_EMAIL}
+      password: ${TEST_USER_PASSWORD}
+    success_indicator: "dashboard"
+    token_location: "cookie:session_id"
+
+# Custom Headers
+headers:
+  X-Custom-Header: "value"
+  X-Request-ID: "aiptx-scan-${TIMESTAMP}"
+  User-Agent: "AIPTx Security Scanner"
+
+# Rate Limiting
+rate_limit:
+  requests_per_second: 10
+  concurrent_requests: 5
+  delay_between_requests: 100  # ms
+
+  # Respect server limits
+  respect_retry_after: true
+
+  # Backoff configuration
+  backoff:
+    enabled: true
+    initial_delay: 1000
+    max_delay: 30000
+    multiplier: 2
+
+# Proxy Configuration
+proxy:
+  enabled: false
+  url: http://proxy.example.com:8080
+  auth:
+    username: ${PROXY_USER}
+    password: ${PROXY_PASS}
+
+# AI Instructions
+instructions: |
+  Application Type: E-commerce platform
+
+  Critical Areas:
+  - Payment processing at /checkout
+  - User authentication
+  - Order management
+
+  Test Users:
+  - Regular: test@example.com
+  - Admin: admin@example.com
+
+  DO NOT:
+  - Test /api/billing/charge (live payments)
+  - Delete any data
+  - Test user IDs > 1000
+
+# Vulnerability Settings
+vulnerabilities:
+  # Enable/disable categories
+  categories:
+    injection: true
+    authentication: true
+    access_control: true
+    xss: true
+    csrf: true
+    ssrf: true
+    business_logic: true
+
+  # Severity threshold
+  minimum_severity: low  # info, low, medium, high, critical
+
+# Reporting
+reporting:
+  auto_generate: true
+  format: pdf
+  template: technical
+
+  # Email delivery
+  email:
+    enabled: true
+    recipients:
+      - security@example.com
+    on_completion: true
+    on_critical: true
+
+# Notifications
+notifications:
+  slack:
+    enabled: true
+    webhook: ${SLACK_WEBHOOK}
+    channel: "#security-alerts"
+    on_critical: true
+    on_completion: true
+
+  email:
+    enabled: true
+    smtp:
+      host: smtp.example.com
+      port: 587
+      user: ${SMTP_USER}
+      password: ${SMTP_PASS}
+
+# Integration
+integrations:
+  jira:
+    enabled: true
+    url: https://company.atlassian.net
+    project: SEC
+    auto_create: true
+    severity_threshold: high
+```
+
+## Environment Variables
+
+### Required Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AIPTX_API_KEY` | API authentication key |
+
+### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AIPTX_AUTH_TOKEN` | Target app auth token | - |
+| `AIPTX_CONFIG` | Config file path | `./aiptx.yaml` |
+| `AIPTX_OUTPUT` | Output directory | `./aiptx-output` |
+| `AIPTX_LOG_LEVEL` | Log verbosity | `info` |
+
+### Using Environment Variables in Config
+
+```yaml
+authentication:
+  token: ${AIPTX_AUTH_TOKEN}
+
+# With default value
+headers:
+  X-API-Key: ${API_KEY:-default_key}
+```
+
+## Multi-Environment Setup
+
+### Development
+
+```yaml
+# aiptx.dev.yaml
+target:
+  urls:
+    - https://dev.example.com
+
+scan:
+  mode: quick
+
+rate_limit:
+  requests_per_second: 50
+```
+
+### Staging
+
+```yaml
+# aiptx.staging.yaml
+target:
+  urls:
+    - https://staging.example.com
+
+scan:
+  mode: standard
+```
+
+### Production
+
+```yaml
+# aiptx.prod.yaml
+target:
+  urls:
+    - https://example.com
+
+scan:
+  mode: standard
+
+rate_limit:
+  requests_per_second: 5
+
+schedule:
+  enabled: true
+  cron: "0 2 * * 0"  # Weekly Sunday 2 AM
+```
+
+### Usage
+
+```bash
+aiptx scan --config ./aiptx.staging.yaml
+```
+
+## Configuration Validation
+
+Validate configuration before scanning:
+
+```bash
+aiptx config validate ./aiptx.yaml
+```
+
+Output:
+```
+Configuration Validation Results:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Target URLs: 2 valid
+✅ Authentication: Configured (bearer)
+✅ Scope: 4 include patterns, 8 exclude patterns
+✅ Rate Limit: 10 req/s, 5 concurrent
+✅ Instructions: 245 characters
+⚠️  Warning: No proxy configured
+
+Configuration is valid.
+```
+
+## Configuration Inheritance
+
+Extend base configurations:
+
+```yaml
+# aiptx.base.yaml
+rate_limit:
+  requests_per_second: 10
+
+headers:
+  X-Scanner: AIPTx
+
+# aiptx.prod.yaml
+extends: ./aiptx.base.yaml
+
+target:
+  urls:
+    - https://example.com
+
+rate_limit:
+  requests_per_second: 5  # Override base
+```

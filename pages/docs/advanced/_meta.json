@@ -1,0 +1,6 @@
+{
+  "configuration": "Configuration",
+  "authentication-testing": "Authentication Testing",
+  "api-scanning": "API Scanning",
+  "network-scanning": "Network Scanning"
+}

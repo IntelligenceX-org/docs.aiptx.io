@@ -1,0 +1,317 @@
+---
+title: Jira
+description: 'Automatically create and track security issues in Jira'
+---
+
+# Jira Integration
+
+Streamline vulnerability remediation by automatically creating Jira issues from AIPTx findings.
+
+## Setup
+
+### 1. Connect Jira
+
+1. Log in to the [AIPTx Dashboard](https://app.aiptx.io)
+2. Navigate to **Settings** → **Integrations** → **Jira**
+3. Click **Connect Jira**
+4. Enter your Jira instance URL (e.g., `yourcompany.atlassian.net`)
+5. Authorize AIPTx to access your Jira workspace
+
+### 2. Configure Project Mapping
+
+Map AIPTx projects to Jira projects:
+
+| AIPTx Project | Jira Project | Issue Type |
+|---------------|--------------|------------|
+| Web App | WEBAPP | Bug |
+| API | API | Security |
+| Mobile | MOBILE | Bug |
+
+### 3. Set Up Field Mapping
+
+Configure how AIPTx findings map to Jira fields:
+
+```yaml
+field_mapping:
+  summary: "${finding.title}"
+  description: "${finding.description}\n\n${finding.remediation}"
+  priority: "${finding.severity}"
+  labels:
+    - "security"
+    - "aiptx"
+    - "${finding.category}"
+  custom_fields:
+    cvss_score: "${finding.cvss_score}"
+    cwe_id: "${finding.cwe_id}"
+```
+
+## Automatic Issue Creation
+
+### Configuration
+
+Enable automatic issue creation for specific severity levels:
+
+```yaml
+auto_create:
+  enabled: true
+  severity_threshold: high  # critical, high, medium, low
+  deduplicate: true
+  project: SECURITY
+  issue_type: Bug
+  assignee: security-team
+```
+
+### Issue Template
+
+Customize the issue template:
+
+```yaml
+template:
+  summary: "[${severity}] ${title}"
+  description: |
+    ## Vulnerability Details
+
+    **Severity:** ${severity}
+    **CVSS Score:** ${cvss_score}
+    **Category:** ${category}
+    **CWE:** ${cwe_id}
+
+    ## Description
+    ${description}
+
+    ## Affected Endpoint
+    - **Method:** ${endpoint.method}
+    - **Path:** ${endpoint.path}
+    - **Parameter:** ${endpoint.parameter}
+
+    ## Proof of Concept
+    ```
+    ${poc.curl_command}
+    ```
+
+    ## Remediation
+    ${remediation.summary}
+
+    ## References
+    ${remediation.references}
+
+    ---
+    *Created by AIPTx | [View in Dashboard](${finding_url})*
+```
+
+## Manual Issue Creation
+
+### From Dashboard
+
+1. Open a finding in the AIPTx dashboard
+2. Click **Create Jira Issue**
+3. Review and customize fields
+4. Click **Create**
+
+### From API
+
+```bash
+curl -X POST "https://api.aiptx.io/v1/findings/{finding_id}/jira" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "project": "SECURITY",
+    "issue_type": "Bug",
+    "priority": "High",
+    "assignee": "john@example.com"
+  }'
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "jira_issue": {
+      "key": "SECURITY-1234",
+      "url": "https://yourcompany.atlassian.net/browse/SECURITY-1234",
+      "status": "Open"
+    },
+    "finding_id": "finding_xyz789"
+  }
+}
+```
+
+## Bidirectional Sync
+
+### Status Synchronization
+
+AIPTx syncs status changes between platforms:
+
+| Jira Status | AIPTx Status |
+|-------------|--------------|
+| To Do | open |
+| In Progress | open |
+| Done | fixed |
+| Won't Fix | accepted |
+
+### Configuration
+
+```yaml
+sync:
+  enabled: true
+  direction: bidirectional  # jira_to_aiptx, aiptx_to_jira, bidirectional
+  status_mapping:
+    jira_to_aiptx:
+      "Done": "fixed"
+      "Won't Fix": "accepted"
+      "Cannot Reproduce": "false_positive"
+    aiptx_to_jira:
+      "fixed": "Done"
+      "accepted": "Won't Fix"
+```
+
+## Bulk Operations
+
+### Bulk Create Issues
+
+Create Jira issues for multiple findings:
+
+```bash
+curl -X POST "https://api.aiptx.io/v1/findings/jira/bulk" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "finding_ids": ["finding_1", "finding_2", "finding_3"],
+    "project": "SECURITY",
+    "issue_type": "Bug"
+  }'
+```
+
+### From Scan Results
+
+Create issues for all findings from a scan:
+
+```bash
+curl -X POST "https://api.aiptx.io/v1/scans/{scan_id}/jira" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "severity_filter": ["critical", "high"],
+    "project": "SECURITY"
+  }'
+```
+
+## Advanced Configuration
+
+### Priority Mapping
+
+Map AIPTx severity to Jira priority:
+
+```yaml
+priority_mapping:
+  critical: Highest
+  high: High
+  medium: Medium
+  low: Low
+  info: Lowest
+```
+
+### Custom Fields
+
+Map to Jira custom fields:
+
+```yaml
+custom_fields:
+  - aiptx_field: cvss_score
+    jira_field: customfield_10001
+  - aiptx_field: cwe_id
+    jira_field: customfield_10002
+  - aiptx_field: endpoint.path
+    jira_field: customfield_10003
+```
+
+### Labels and Components
+
+```yaml
+labels:
+  static:
+    - security
+    - vulnerability
+    - aiptx
+  dynamic:
+    - "${finding.category}"
+    - "${finding.severity}"
+
+components:
+  mapping:
+    authentication: "Auth System"
+    injection: "Backend"
+    xss: "Frontend"
+```
+
+## Workflows
+
+### Security Triage Workflow
+
+Example Jira workflow for security findings:
+
+```
+Open → Triaging → In Progress → In Review → Done
+         ↓
+    Won't Fix / Accepted Risk
+```
+
+### SLA Tracking
+
+Configure SLA based on severity:
+
+| Severity | Response Time | Resolution Time |
+|----------|---------------|-----------------|
+| Critical | 4 hours | 24 hours |
+| High | 24 hours | 7 days |
+| Medium | 48 hours | 30 days |
+| Low | 7 days | 90 days |
+
+## Reporting
+
+### JQL Queries
+
+Example JQL queries for AIPTx findings:
+
+```
+# All open security findings
+labels = aiptx AND status != Done
+
+# Critical findings from last week
+labels = aiptx AND priority = Highest AND created >= -7d
+
+# Findings by scan
+labels = aiptx AND "Scan ID" = "scan_abc123"
+```
+
+### Dashboards
+
+Create Jira dashboards with:
+
+- **Vulnerability Backlog** - Open findings by severity
+- **Remediation Progress** - Findings fixed over time
+- **SLA Compliance** - Issues within/breaching SLA
+- **Trend Analysis** - New vs fixed findings
+
+## Troubleshooting
+
+
+  #### Issues not being created
+
+    1. Verify Jira connection in Settings → Integrations
+    2. Check project permissions - AIPTx needs create issue permission
+    3. Verify issue type exists in target project
+    4. Check required fields are mapped
+  
+
+  #### Duplicate issues
+
+    Enable deduplication in settings. AIPTx uses finding fingerprint to prevent duplicates.
+  
+
+  #### Sync not working
+
+    1. Verify webhook is configured in Jira
+    2. Check bidirectional sync is enabled
+    3. Verify status mapping configuration
+  
+

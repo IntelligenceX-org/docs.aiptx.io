@@ -1,0 +1,291 @@
+---
+title: GitHub Actions
+description: 'Integrate AIPTx security scanning into your GitHub CI/CD pipeline'
+---
+
+# GitHub Actions Integration
+
+Automate security testing in your GitHub workflows with AIPTx's official GitHub Action.
+
+## Quick Start
+
+Add security scanning to any workflow:
+
+```yaml
+name: Security Scan
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run AIPTx Security Scan
+        uses: aiptx/scan-action@v1
+        with:
+          api-key: ${{ secrets.AIPTX_API_KEY }}
+          target: https://staging.example.com
+          mode: quick
+```
+
+## Installation
+
+### 1. Get Your API Key
+
+1. Log in to the [AIPTx Dashboard](https://app.aiptx.io)
+2. Navigate to **Settings** → **API Keys**
+3. Generate a new key with appropriate permissions
+
+### 2. Add Secret to GitHub
+
+1. Go to your repository **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `AIPTX_API_KEY`
+4. Value: Your AIPTx API key
+
+### 3. Create Workflow File
+
+Create `.github/workflows/security.yml`:
+
+```yaml
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize]
+  schedule:
+    - cron: '0 2 * * 1' # Weekly on Monday at 2 AM
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run AIPTx Scan
+        uses: aiptx/scan-action@v1
+        with:
+          api-key: ${{ secrets.AIPTX_API_KEY }}
+          target: ${{ vars.STAGING_URL }}
+          mode: standard
+          fail-on: high
+```
+
+## Configuration Options
+
+### Action Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `api-key` | AIPTx API key | Yes | - |
+| `target` | Target URL to scan | Yes | - |
+| `mode` | Scan mode: `quick`, `standard`, `deep` | No | `standard` |
+| `type` | Scan type: `web`, `api`, `network`, `full` | No | `web` |
+| `openapi` | Path to OpenAPI spec file | No | - |
+| `fail-on` | Fail build on severity: `critical`, `high`, `medium`, `low` | No | `critical` |
+| `timeout` | Scan timeout in minutes | No | `60` |
+| `wait` | Wait for scan completion | No | `true` |
+| `config` | Path to aiptx.yaml config file | No | - |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `scan-id` | The ID of the created scan |
+| `scan-url` | URL to view scan results |
+| `findings-critical` | Number of critical findings |
+| `findings-high` | Number of high findings |
+| `findings-medium` | Number of medium findings |
+| `findings-low` | Number of low findings |
+| `status` | Scan status |
+
+## Common Workflows
+
+### Pull Request Scanning
+
+Scan preview deployments on pull requests:
+
+```yaml
+name: PR Security Check
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  wait-for-preview:
+    runs-on: ubuntu-latest
+    outputs:
+      preview-url: ${{ steps.get-url.outputs.url }}
+    steps:
+      - name: Wait for Vercel Preview
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.1
+        id: get-url
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 300
+
+  security-scan:
+    needs: wait-for-preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Security Scan
+        uses: aiptx/scan-action@v1
+        id: scan
+        with:
+          api-key: ${{ secrets.AIPTX_API_KEY }}
+          target: ${{ needs.wait-for-preview.outputs.preview-url }}
+          mode: quick
+          fail-on: high
+
+      - name: Comment PR with Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔒 Security Scan Results
+
+              | Severity | Count |
+              |----------|-------|
+              | Critical | ${{ steps.scan.outputs.findings-critical }} |
+              | High | ${{ steps.scan.outputs.findings-high }} |
+              | Medium | ${{ steps.scan.outputs.findings-medium }} |
+              | Low | ${{ steps.scan.outputs.findings-low }} |
+
+              [View Full Report](${{ steps.scan.outputs.scan-url }})`
+            })
+```
+
+### Scheduled Deep Scan
+
+Run comprehensive scans weekly:
+
+```yaml
+name: Weekly Security Audit
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # Sunday at 2 AM UTC
+
+jobs:
+  deep-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Deep Scan
+        uses: aiptx/scan-action@v1
+        id: scan
+        with:
+          api-key: ${{ secrets.AIPTX_API_KEY }}
+          target: https://app.example.com
+          mode: deep
+          timeout: 480 # 8 hours
+
+      - name: Generate Report
+        run: |
+          curl -X POST "https://api.aiptx.io/v1/reports" \
+            -H "Authorization: Bearer ${{ secrets.AIPTX_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"scan_id": "${{ steps.scan.outputs.scan-id }}", "format": "pdf", "template": "executive"}'
+
+      - name: Notify Team
+        uses: slackapi/slack-github-action@v1
+        with:
+          channel-id: 'security-alerts'
+          slack-message: |
+            Weekly security scan completed!
+            Critical: ${{ steps.scan.outputs.findings-critical }}
+            High: ${{ steps.scan.outputs.findings-high }}
+            View: ${{ steps.scan.outputs.scan-url }}
+```
+
+### Multi-Environment Scanning
+
+Scan multiple environments in parallel:
+
+```yaml
+name: Multi-Environment Scan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment:
+          - name: staging
+            url: https://staging.example.com
+            mode: standard
+          - name: production
+            url: https://app.example.com
+            mode: quick
+    steps:
+      - name: Scan ${{ matrix.environment.name }}
+        uses: aiptx/scan-action@v1
+        with:
+          api-key: ${{ secrets.AIPTX_API_KEY }}
+          target: ${{ matrix.environment.url }}
+          mode: ${{ matrix.environment.mode }}
+```
+
+### With OpenAPI Specification
+
+```yaml
+- name: Run API Scan
+  uses: aiptx/scan-action@v1
+  with:
+    api-key: ${{ secrets.AIPTX_API_KEY }}
+    target: https://api.example.com
+    type: api
+    openapi: ./openapi.yaml
+```
+
+## Security Gates
+
+Block deployments based on findings:
+
+```yaml
+deploy:
+  needs: security-scan
+  if: ${{ needs.security-scan.outputs.findings-critical == '0' && needs.security-scan.outputs.findings-high == '0' }}
+  runs-on: ubuntu-latest
+  steps:
+    - name: Deploy to Production
+      run: ./deploy.sh
+```
+
+## Troubleshooting
+
+
+  #### Scan times out
+
+    Increase the timeout value or use `quick` mode for CI/CD:
+    ```yaml
+    timeout: 120
+    mode: quick
+    ```
+  
+
+  #### Cannot reach target
+
+    Ensure your target is accessible from GitHub's runners. For internal applications, consider using self-hosted runners or deploying a preview environment.
+  
+
+  #### API key not working
+
+    Verify the secret is correctly named and the API key has appropriate permissions in the AIPTx dashboard.
+  
+

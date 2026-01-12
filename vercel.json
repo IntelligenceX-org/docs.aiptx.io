@@ -1,6 +1,5 @@
 {
-  "buildCommand": "npx mintlify@latest build",
-  "outputDirectory": ".mintlify/output",
-  "installCommand": "npm install",
-  "framework": null
+  "buildCommand": "npm run build",
+  "outputDirectory": "out",
+  "framework": "nextjs"
 }
