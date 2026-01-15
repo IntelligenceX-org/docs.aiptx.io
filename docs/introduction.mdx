@@ -1,43 +1,66 @@
 ---
-title: Introduction
-description: 'AI-powered penetration testing that finds vulnerabilities before hackers do'
+title: "AIPTx - AI-Powered VAPT & Penetration Testing Platform"
+sidebarTitle: "Introduction"
+description: "Get automated penetration testing reports in 1 hour with validated findings and PoC evidence. Discover vulnerabilities before hackers do."
+icon: "house"
+og:title: "AIPTx - AI-Powered VAPT & Penetration Testing Platform"
+og:description: "Discover critical vulnerabilities before hackers exploit them. Automated penetration testing reports in 1 hour with proof-of-concept validation."
 ---
+
+{/* SEO: Primary Keywords - VAPT, vulnerability assessment, penetration testing, AI security, automated pentesting */}
+{/* SEO: Secondary Keywords - cyber security, security compliance, SOC 2, ISO 27001, PCI-DSS */}
 
 # Welcome to AIPTx
 
-AIPTx is an autonomous AI-powered penetration testing platform that acts like an expert security researcher. It dynamically scans your applications, finds vulnerabilities, and validates them with proof-of-concept exploits.
+<Note>
+**Get security reports in 1 hour** — AIPTx delivers automated penetration testing with validated findings and proof-of-concept evidence, reducing assessment time from weeks to hours.
+</Note>
 
-## What is AIPTx?
+AIPTx is a cloud-based SaaS platform that automates vulnerability assessment and penetration testing (VAPT). Discover critical vulnerabilities before hackers exploit them with AI-powered security testing that identifies attack chains often missed by manual testing.
 
-AIPTx combines advanced AI agents with professional penetration testing methodologies to deliver:
+## Why AIPTx?
 
 <CardGroup cols={2}>
-  <Card title="Autonomous Testing" icon="robot">
-    AI agents that think and act like experienced penetration testers, exploring your application for vulnerabilities.
+  <Card title="Results in 1 Hour" icon="clock">
+    Get comprehensive security reports in under an hour, not weeks. Continuous monitoring keeps you protected 24/7.
   </Card>
-  <Card title="Real Validation" icon="check-circle">
-    Every finding includes a working proof-of-concept, eliminating false positives from your reports.
+  <Card title="Validated Findings with PoC" icon="check-circle">
+    Every vulnerability includes proof-of-concept exploits and evidence, eliminating false positives from your reports.
   </Card>
-  <Card title="Compliance Ready" icon="file-certificate">
-    Generate audit-ready reports for SOC 2, ISO 27001, PCI-DSS, HIPAA, and 40+ compliance frameworks.
+  <Card title="Attack Chain Detection" icon="link">
+    AI identifies complex attack chains and vulnerabilities that manual testing often misses.
   </Card>
-  <Card title="Developer Friendly" icon="code">
-    Integrates with your CI/CD pipeline, GitHub/GitLab, Slack, and Jira for seamless DevSecOps workflows.
+  <Card title="Auto-Remediation" icon="wand-magic-sparkles">
+    Get production-ready code fixes automatically generated for each vulnerability.
   </Card>
 </CardGroup>
 
-## Vulnerability Coverage
+## Platform Capabilities
 
-AIPTx tests for a comprehensive range of vulnerabilities across multiple categories:
+| Capability | Description |
+|------------|-------------|
+| **Web Application Security** | OWASP Top 10, business logic flaws, authentication bypass |
+| **API Security Testing** | REST, GraphQL, and API endpoint vulnerability detection |
+| **Cloud Security Assessment** | AWS, Azure, GCP misconfiguration scanning |
+| **Attack Surface Monitoring** | Continuous discovery across APIs, web apps, networks, and code repos |
+| **CI/CD Integration** | Native GitHub Actions & GitLab CI pipelines |
+| **Real-time Alerts** | Slack & Microsoft Teams notifications |
 
-| Category | Examples |
-|----------|----------|
-| **Injection** | SQL Injection, Command Injection, LDAP Injection, XPath Injection |
-| **Authentication** | Broken Authentication, Session Management, Credential Stuffing |
-| **Access Control** | IDOR, Privilege Escalation, Forced Browsing, Path Traversal |
-| **Business Logic** | Price Manipulation, Workflow Bypass, Race Conditions |
-| **Client-Side** | XSS (Stored, Reflected, DOM), CSRF, Clickjacking |
-| **Server-Side** | SSRF, XXE, Insecure Deserialization, File Upload |
+## Compliance & Certifications
+
+AIPTx is trusted by organizations across financial services, tech, and healthcare sectors.
+
+<CardGroup cols={3}>
+  <Card title="SOC 2 Type II" icon="shield-check">
+    Certified compliant
+  </Card>
+  <Card title="ISO 27001" icon="globe">
+    Certified compliant
+  </Card>
+  <Card title="PCI DSS" icon="credit-card">
+    Compliant reporting
+  </Card>
+</CardGroup>
 
 ## How It Works
 
@@ -45,15 +68,51 @@ AIPTx tests for a comprehensive range of vulnerabilities across multiple categor
 graph LR
     A[Configure Target] --> B[AI Reconnaissance]
     B --> C[Vulnerability Discovery]
-    C --> D[Exploit Validation]
-    D --> E[Generate Report]
+    C --> D[PoC Validation]
+    D --> E[Report in 1 Hour]
 ```
 
-1. **Configure your target** - Provide your application URL, API endpoints, or network range
-2. **AI reconnaissance** - AIPTx maps your attack surface and identifies entry points
-3. **Vulnerability discovery** - AI agents probe for security weaknesses
-4. **Exploit validation** - Each finding is validated with a working proof-of-concept
-5. **Generate report** - Receive a compliance-ready report with remediation guidance
+1. **Configure your target** — Provide your application URL, API endpoints, or cloud environment
+2. **AI reconnaissance** — AIPTx maps your complete attack surface automatically
+3. **Vulnerability discovery** — AI agents probe for security weaknesses and attack chains
+4. **PoC validation** — Each finding is validated with working proof-of-concept exploits
+5. **Get your report** — Receive a compliance-ready report with auto-generated remediation code
+
+## SDKs & Installation
+
+AIPTx is available as a Python package and provides SDKs for multiple languages:
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    pip install aiptx
+    ```
+    Current version: **v2.0.6** (1.17k+ monthly downloads)
+  </Tab>
+  <Tab title="Node.js">
+    ```bash
+    npm install @aiptx/sdk
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```bash
+    go get github.com/aiptx/aiptx-go
+    ```
+  </Tab>
+</Tabs>
+
+## Pricing
+
+AIPTx offers flexible pricing from **$99/month** for startups to **$1,999/month** for enterprise teams, with 5 plans to match your security needs.
+
+<CardGroup cols={2}>
+  <Card title="View Pricing" icon="tag" href="https://aiptx.io/pricing">
+    Compare all 5 pricing tiers
+  </Card>
+  <Card title="Start Free Assessment" icon="play" href="https://aiptx.io">
+    Try AIPTx with no commitment
+  </Card>
+</CardGroup>
 
 ## Quick Links
 
@@ -68,3 +127,4 @@ graph LR
     Integrate AIPTx into your workflows
   </Card>
 </CardGroup>
+

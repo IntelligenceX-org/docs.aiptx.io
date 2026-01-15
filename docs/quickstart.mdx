@@ -1,16 +1,22 @@
 ---
-title: Quick Start
-description: 'Get your first AIPTx scan running in under 5 minutes'
+title: "Quick Start - Automated VAPT & Penetration Testing Setup"
+sidebarTitle: "Quick Start"
+description: "Get started with AIPTx automated VAPT (Vulnerability Assessment and Penetration Testing) in under 5 minutes. Install the CLI, configure authentication, and run your first security scan."
+icon: "rocket"
+og:title: "Quick Start Guide - AIPTx Penetration Testing"
+og:description: "Set up automated penetration testing in minutes. Install AIPTx CLI, authenticate, and run your first VAPT security scan."
 ---
+
+{/* SEO: Primary Keywords - quick start, VAPT setup, penetration testing, security scan, automated pentesting */}
 
 # Quick Start Guide
 
-This guide will help you run your first penetration test with AIPTx.
+Get your first security assessment running in under 5 minutes. AIPTx delivers comprehensive penetration testing reports in **1 hour**.
 
 ## Prerequisites
 
-- An AIPTx account ([Sign up here](https://aiptx.io/signup))
-- Node.js 18+ or Python 3.9+
+- An AIPTx account ([Sign up here](https://aiptx.io))
+- Python 3.9+ (recommended) or Node.js 18+
 - Access to the target application you want to test
 
 <Warning>
@@ -19,20 +25,23 @@ This guide will help you run your first penetration test with AIPTx.
 
 ## Installation
 
+AIPTx is available as a Python package (v2.0.6) with 1.17k+ monthly downloads:
+
 <Tabs>
+  <Tab title="pip (Recommended)">
+    ```bash
+    pip install aiptx
+    ```
+    Current version: **v2.0.6**
+  </Tab>
   <Tab title="npm">
     ```bash
     npm install -g @aiptx/cli
     ```
   </Tab>
-  <Tab title="pip">
+  <Tab title="Go">
     ```bash
-    pip install aiptx
-    ```
-  </Tab>
-  <Tab title="brew">
-    ```bash
-    brew install aiptx/tap/aiptx
+    go get github.com/aiptx/aiptx-go
     ```
   </Tab>
 </Tabs>
@@ -79,10 +88,10 @@ aiptx scan https://your-app.com \
 
 ## Understanding Scan Output
 
-During the scan, you'll see real-time progress:
+During the scan, you'll see real-time progress. **Results are ready in about 1 hour:**
 
 ```
-AIPTx v2.0.0 - AI-Powered Penetration Testing
+AIPTx v2.0.6 - AI-Powered Penetration Testing
 
 Target: https://your-app.com
 Mode: Full Scan

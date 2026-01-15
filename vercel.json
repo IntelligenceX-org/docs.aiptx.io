@@ -2,5 +2,93 @@
   "buildCommand": "npx mintlify@latest build",
   "outputDirectory": ".mintlify/output",
   "installCommand": "npm install",
-  "framework": null
+  "framework": null,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=43200"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/xml"
+        }
+      ]
+    },
+    {
+      "source": "/robots.txt",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/plain"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).mdx",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/vapt",
+      "destination": "/docs/vapt-services"
+    },
+    {
+      "source": "/penetration-testing",
+      "destination": "/docs/vapt-services"
+    },
+    {
+      "source": "/vulnerability-assessment",
+      "destination": "/docs/vapt-services"
+    },
+    {
+      "source": "/security-testing",
+      "destination": "/docs/vapt-services"
+    },
+    {
+      "source": "/compliance",
+      "destination": "/docs/reports/compliance-frameworks"
+    },
+    {
+      "source": "/soc2",
+      "destination": "/docs/reports/compliance-frameworks"
+    },
+    {
+      "source": "/pci-dss",
+      "destination": "/docs/reports/compliance-frameworks"
+    }
+  ]
 }

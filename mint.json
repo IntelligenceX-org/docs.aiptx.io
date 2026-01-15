@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "AIPTx Documentation",
+  "name": "AIPTx - AI-Powered VAPT & Penetration Testing Platform",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
@@ -14,6 +14,35 @@
       "from": "#ef4444",
       "to": "#f97316"
     }
+  },
+  "metadata": {
+    "charset": "utf-8",
+    "description": "Get automated penetration testing reports in 1 hour with validated findings and PoC evidence. Discover vulnerabilities before hackers do. Starting at $99/month.",
+    "keywords": "VAPT, vulnerability assessment, penetration testing, pentest, cyber security, security testing, automated pentesting, AI security, web application security, API security, network security, OWASP Top 10, SQL injection, XSS, CSRF, security compliance, SOC 2, ISO 27001, PCI-DSS, security audit, vulnerability scanner, security assessment, ethical hacking, application security, DevSecOps, shift-left security, continuous security testing, security automation, vulnerability management, cloud security testing, attack surface monitoring, proof of concept, PoC validation, automated remediation, CI/CD security, GitHub Actions security, penetration testing as a service, PTaaS",
+    "og:type": "website",
+    "og:site_name": "AIPTx Documentation",
+    "og:title": "AIPTx - AI-Powered VAPT Platform | Pentest Reports in 1 Hour",
+    "og:description": "Discover critical vulnerabilities before hackers exploit them. Automated penetration testing reports in 1 hour with PoC validation. SOC 2 Type II & ISO 27001 certified. From $99/month.",
+    "og:image": "https://docs.aiptx.io/images/og-image.png",
+    "og:url": "https://docs.aiptx.io",
+    "og:locale": "en_US",
+    "twitter:card": "summary_large_image",
+    "twitter:site": "@aiptx",
+    "twitter:creator": "@aiptx",
+    "twitter:title": "AIPTx - Pentest Reports in 1 Hour | AI-Powered VAPT",
+    "twitter:description": "Discover vulnerabilities before hackers do. Automated penetration testing with PoC validation in 1 hour. SOC 2 & ISO 27001 certified. From $99/mo.",
+    "twitter:image": "https://docs.aiptx.io/images/twitter-card.png",
+    "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "googlebot": "index, follow",
+    "author": "AIPTx Security",
+    "publisher": "AIPTx",
+    "theme-color": "#f97316"
+  },
+  "seo": {
+    "indexHiddenPages": false
+  },
+  "openapi": {
+    "url": "https://api.aiptx.io/openapi.json"
   },
   "topbarLinks": [
     {
@@ -64,6 +93,7 @@
       "group": "Getting Started",
       "pages": [
         "docs/introduction",
+        "docs/vapt-services",
         "docs/quickstart",
         "docs/how-it-works"
       ]
